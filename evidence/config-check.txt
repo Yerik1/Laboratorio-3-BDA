@@ -1,0 +1,13 @@
+ Container ti4601-app-run-6a6eede48ce6 Creating 
+ Container ti4601-app-run-6a6eede48ce6 Created 
+[ OK ] el conjunto se llama rs-lab3 y tiene 3 miembros
+[ OK ] los 3 miembros están sanos (health = 1)
+[ OK ] hay exactamente 1 PRIMARY y 2 SECONDARY
+[ OK ] los 3 miembros votan (votes = 1, priority > 0)
+[ OK ] eventos tiene 400 documentos (los del manifiesto)
+[ OK ] existen los índices compuestos de eventos y ordenes
+
+Diferencia máxima de optime entre miembros: 0.0 s
+
+Resultado: 6/6 verificaciones.
+Configuración lista para observación, mediciones y fallas.
