@@ -221,4 +221,56 @@ docker exec ti4601-mongo-1 mongosh --quiet --eval "const d=db.getSiblingDB('bole
 
 **Estado:** OK
 
+## Paso 6 — Observación del oplog y retraso de replicación
+
+**Fecha y hora:** 31/10/2026, aproximadamente 23:50
+
+**Comandos ejecutados:**
+
+Inserción de una orden en el primario:
+```bash
+docker exec ti4601-mongo-1 mongosh --quiet --eval "printjson(db.getSiblingDB('boleteria').ordenes.insertOne({_id:'ORD-MANUAL-1',evento_id:'EV-0001',zona:'General',cantidad:2,estado:'confirmada'}))"
+```
+
+Consulta de la operación en el oplog:
+```bash
+docker exec ti4601-mongo-1 mongosh --quiet --eval "db.getSiblingDB('local').oplog.rs.find({ns:'boleteria.ordenes'}).sort({$natural:-1}).limit(3).forEach(printjson)"
+```
+
+Verificación de la orden desde un secundario:
+```bash
+docker exec ti4601-mongo-2 mongosh --quiet --eval "printjson(db.getSiblingDB('boleteria').ordenes.findOne({_id:'ORD-MANUAL-1'}))"
+```
+
+Prueba de escritura en un secundario:
+```bash
+docker exec ti4601-mongo-2 mongosh --quiet --eval "printjson(db.getSiblingDB('boleteria').ordenes.insertOne({_id:'ORD-NO',estado:'x'}))"
+```
+
+Generación de evidencia del oplog y retraso:
+```bash
+docker exec ti4601-mongo-1 mongosh --quiet --eval "db.getSiblingDB('local').oplog.rs.find({ns:'boleteria.ordenes'}).sort({$natural:-1}).limit(3).forEach(printjson); rs.printReplicationInfo(); rs.printSecondaryReplicationInfo()" > evidence/oplog.txt 2>&1
+```
+
+Consulta complementaria de tamaño y ventana del oplog:
+```bash
+docker exec ti4601-mongo-1 mongosh --quiet --eval "const o=db.getSiblingDB('local').oplog.rs; const primero=o.find().sort({$natural:1}).limit(1).next(); const ultimo=o.find().sort({$natural:-1}).limit(1).next(); printjson({tamanoMaximoBytes:o.stats().maxSize,primeraOperacion:primero.wall,ultimaOperacion:ultimo.wall,ventanaSegundos:ultimo.ts.getHighBits()-primero.ts.getHighBits()})" >> evidence/oplog.txt
+```
+
+**Resultados:**
+- La orden `ORD-MANUAL-1` se insertó correctamente (`acknowledged: true`).
+- Se encontró la operación en el oplog con `op: 'i'` y `ns: 'boleteria.ordenes'`.
+- La operación se registró en el término de elección `t: 1`.
+- Se verificó que `mongo-2` contenía el mismo documento insertado en el primario.
+- Los secundarios `mongo-2` y `mongo-3` reportaron un retraso de replicación de 0 segundos.
+- Tamaño máximo configurado del oplog: 50062255616 bytes.
+- Primera operación registrada: `2026-11-01T02:21:47.094Z`.
+- Última operación registrada: `2026-11-01T05:49:47.464Z`.
+- Ventana temporal observada del oplog: 12480 segundos (3 horas y 28 minutos).
+- Se confirmó que mongo-2, al actuar como SECONDARY, rechazó la escritura directa con el error MongoServerError: not primary.
+
+**Evidencia:** `oplog.txt`
+
+**Estado:** OK
+
 ---
