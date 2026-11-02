@@ -273,4 +273,28 @@ docker exec ti4601-mongo-1 mongosh --quiet --eval "const o=db.getSiblingDB('loca
 
 **Estado:** OK
 
+## Paso 7 — Lecturas obsoletas en secundarios
+
+**Fecha y hora:** 01/11/2026, 00:01.
+
+**Comando ejecutado:**
+```bash
+docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-replicas/lectura_secundario.py --n 500 --csv evidence/lectura-secundario.csv > evidence/lectura-secundario.txt 2>&1
+```
+
+**Resultados:**
+- Se ejecutaron 500 intentos por modalidad, para un total de 1500 intentos.
+- `w1_secundario`: 493 lecturas obsoletas (98.6 %).
+- `majority_secundario`: 0 lecturas obsoletas (0.0 %).
+- `causal_majority`: 0 lecturas obsoletas (0.0 %).
+- La escritura con `w:1` presentó la mayor cantidad de lecturas obsoletas.
+- En esta ejecución, las modalidades con `w="majority"` no presentaron lecturas obsoletas.
+- El modo causal obtuvo el resultado esperado de 0 %.
+- Se considera que los tres nodos comparten una misma computadora, por lo que las condiciones de replicación difieren de un entorno distribuido real.
+
+**Evidencias:**
+- `lectura-secundario.txt`
+- `lectura-secundario.csv`
+
+**Estado:** OK
 ---
