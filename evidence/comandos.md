@@ -402,4 +402,50 @@ docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-rep
 - `write-concern.csv`
 
 **Estado:** OK
+
+## Paso 10 — Verificación del RPO y línea base
+
+**Fecha y hora:** 01/11/2026, 16:28.
+
+**Archivo modificado:** `verificar_rpo.py`
+
+**Implementación realizada:**
+- TODO 5: implementación de `calcular_rpo()` mediante operaciones entre conjuntos.
+- Clasificación de operaciones confirmadas perdidas, errores presentes, errores ausentes y documentos inesperados.
+- Verificación del resultado utilizando lecturas con `readConcern: majority`.
+
+**Comando de pruebas sintéticas:**
+```bash
+docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-replicas/verificar_rpo.py --autotest
+```
+
+**Resultado:** los tres casos sintéticos finalizaron correctamente.
+
+**Comando de línea base:**
+```bash
+docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-replicas/sonda_escrituras.py --duration 10 --label Base --csv evidence/rpo-baseline.csv
+```
+
+**Comando de verificación del RPO:**
+```bash
+docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-replicas/verificar_rpo.py --csv evidence/rpo-baseline.csv > evidence/rpo-baseline.txt 2>&1
+```
+
+**Resultados:**
+- Corrida: `r45dc2f28`.
+- Intentos realizados: 20.
+- Operaciones confirmadas: 20.
+- Operaciones con error: 0.
+- Documentos presentes en MongoDB: 20.
+- Operaciones confirmadas perdidas: 0.
+- Errores que sí quedaron escritos: 0.
+- Errores que no quedaron escritos: 0.
+- Documentos inesperados: 0.
+- RPO observado sobre operaciones confirmadas: 0.
+
+**Evidencias:**
+- `rpo-baseline.csv`
+- `rpo-baseline.txt`
+
+**Estado:** OK
 ---
