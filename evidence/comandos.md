@@ -509,4 +509,70 @@ docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-rep
 - `falla-a-rpo.txt`
 
 **Estado:** OK
+
+## Paso 12 — Falla B: caída del primario
+
+**Fecha y hora:** 01/11/2026, 17:04.
+
+**Escenario:** Se detuvo `mongo-1` (PRIMARY) mientras la sonda realizaba escrituras con `w="majority"`. Los dos secundarios permanecieron disponibles para elegir un nuevo primario.
+
+**Comando de la sonda:**
+```cmd
+docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-replicas/sonda_escrituras.py --duration 60 --label "Falla B" --signal-file evidence/falla-b-stop.epoch --csv evidence/falla-b.csv > evidence\falla-b.txt 2>&1
+```
+
+**Operaciones durante la falla:**
+- Se detuvo `ti4601-mongo-1` mediante `docker kill`.
+- Se registró el instante de caída en `falla-b-stop.epoch` y `falla-b-stop.txt`.
+- Se comprobó que el contenedor estaba detenido (`Running: false`).
+- Se esperaron 15 segundos para permitir una nueva elección.
+- Se consultó el estado del Replica Set desde `mongo-2`.
+- Se restauró `mongo-1` mediante `docker start`.
+
+**Comando de verificación del RPO:**
+```cmd
+docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-replicas/verificar_rpo.py --csv evidence/falla-b.csv > evidence\falla-b-rpo.txt 2>&1
+```
+
+**Resultados:**
+- Corrida: `r4115e834`.
+- Antes de la falla, `mongo-1` era PRIMARY y el término de elección era 1.
+- Durante la falla, `mongo-3` fue elegido PRIMARY y el término aumentó a 2.
+- `mongo-1` regresó como SECONDARY después de la recuperación.
+- Intentos: 101.
+- Escrituras confirmadas: 98.
+- Operaciones con error: 3.
+- Tipo de error: `ServerSelectionTimeoutError`.
+- Documentos presentes: 98.
+- Operaciones confirmadas perdidas: 0.
+- Los tres intentos con error resultaron ausentes en la base.
+- RPO observado: 0 operaciones.
+
+**Cálculo del RTO:**
+- Marca de falla: `1793574106.109`.
+- Primera confirmación posterior: `seq=14`, `1793574116.435820`.
+- RTO = `1793574116.435820 - 1793574106.109`.
+- **RTO observado: 10.327 segundos.**
+- Ventana entre la última confirmación anterior y la primera posterior: 10.967 segundos.
+
+**Latencias registradas:**
+
+| Métrica | Antes de la falla | Después de la falla |
+|---|---:|---:|
+| Operaciones confirmadas | 11 | 87 |
+| p50 | 9.7 ms | 26.5 ms |
+| p99 | 48.7 ms | 170.0 ms |
+
+**Evidencias:**
+- `falla-b-before.txt`
+- `falla-b.txt`
+- `falla-b.csv`
+- `falla-b-stop.epoch`
+- `falla-b-stop.txt`
+- `falla-b-docker-status.txt`
+- `falla-b-status.txt`
+- `falla-b-recovered.txt`
+- `falla-b-rpo.txt`
+
+**Estado:** OK
 ---
