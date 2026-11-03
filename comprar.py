@@ -73,7 +73,86 @@ def comprar_entradas(
     Anote en el informe qué ocurre si el proceso muere entre los pasos 2 y 4, y cómo
     lo detectaría (Paso 8, pregunta 3).
     """
-    raise NotImplementedError("TODO 3: comprar_entradas")
+    
+    coleccion_eventos = db[eventos]
+    coleccion_ordenes = db[ordenes]
+
+    # Registrar la orden antes de intentar descontar entradas.
+    try:
+        coleccion_ordenes.insert_one({
+            "_id": orden_id,
+            "evento_id": evento_id,
+            "zona": zona,
+            "cantidad": cantidad,
+            "estado": "pendiente"
+        })
+
+    except DuplicateKeyError:
+        # La orden ya existe: no volver a descontar entradas.
+        orden_existente = coleccion_ordenes.find_one({"_id": orden_id})
+        return orden_existente["estado"]
+    # Descontar entradas solo si la zona tiene suficiente disponibilidad.
+    resultado = coleccion_eventos.update_one(
+        {
+            "_id": evento_id,
+            "zonas": {
+                "$elemMatch": {
+                    "nombre": zona,
+                    "disponibles": {"$gte": cantidad}
+                }
+            }
+        },
+        {
+            "$inc": {
+                "zonas.$.disponibles": -cantidad
+            }
+        }
+    )
+
+    # Determinar si la compra fue posible.
+    if resultado.modified_count == 1:
+        estado = "confirmada"
+    else:
+        estado = "agotada"
+    """
+    # VERSION INCORRECTA: lectura y escritura separadas.
+    evento = coleccion_eventos.find_one({"_id": evento_id})
+
+    zona_actual = None
+    if evento:
+        zona_actual = next(
+            (z for z in evento["zonas"] if z["nombre"] == zona),
+            None
+        )
+
+    if zona_actual and zona_actual["disponibles"] >= cantidad:
+        # Ampliamos la ventana de concurrencia para observar la falla.
+        time.sleep(0.05)
+
+        resultado = coleccion_eventos.update_one(
+            {
+                "_id": evento_id,
+                "zonas.nombre": zona
+            },
+            {
+                "$inc": {
+                    "zonas.$.disponibles": -cantidad
+                }
+            }
+        )
+
+        estado = "confirmada" if resultado.modified_count == 1 else "agotada"
+    else:
+        estado = "agotada"
+    """
+    # Guardar el resultado de la orden.
+    coleccion_ordenes.update_one(
+        {"_id": orden_id},
+        {"$set": {"estado": estado}}
+    )
+
+    return estado
+
 
 
 def preparar(db: Database, entradas: int) -> None:

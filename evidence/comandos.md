@@ -297,4 +297,60 @@ docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-rep
 - `lectura-secundario.csv`
 
 **Estado:** OK
+
+## Paso 8 — Compra atómica e idempotente
+
+**Fecha y hora:** 01/11/2026, 00:15.
+
+**Archivo modificado:** `comprar.py`
+
+**Implementación realizada:**
+- TODO 3: registro de órdenes con identificador único e implementación del descuento atómico mediante `update_one()`.
+- Uso de `$elemMatch` para comprobar disponibilidad en la zona correspondiente.
+- Uso de `$inc` y del operador posicional `$` para descontar las entradas.
+- Manejo de `DuplicateKeyError` para evitar descuentos repetidos por el mismo identificador de orden.
+- Prueba adicional con una implementación incorrecta que separa la lectura y la actualización.
+
+**Comando de prueba correcta:**
+```bash
+docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-replicas/comprar.py > evidence/comprar.txt 2>&1
+```
+
+**Resultados de la implementación correcta:**
+- 200 compradores simultáneos.
+- 120 compras confirmadas y 80 agotadas.
+- Cero entradas restantes, sin disponibilidad negativa.
+- 120 órdenes confirmadas registradas.
+- Compras VIP: dos confirmadas, una agotada y dos entradas restantes.
+- Cinco ejecuciones de la misma orden descontaron una sola entrada.
+- Una zona inexistente devolvió `agotada`.
+- Tiempo de ejecución: 0.66 segundos.
+- Rendimiento: 301 compras por segundo.
+- Las seis verificaciones terminaron correctamente.
+
+**Prueba con implementación incorrecta:**
+
+Se reemplazó temporalmente el descuento condicional por una lectura de disponibilidad seguida de una escritura independiente.
+
+**Comando ejecutado:**
+```bash
+docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-replicas/comprar.py > evidence/comprar-incorrecto.txt 2>&1
+```
+
+**Resultados:**
+- 188 compras confirmadas y 12 agotadas.
+- Se produjeron 68 ventas por encima de la capacidad disponible.
+- La disponibilidad de la zona General terminó en −68.
+- En VIP se confirmaron tres compras de cuatro entradas, dejando −2 disponibles.
+- Las pruebas de idempotencia y zona inexistente continuaron pasando.
+- El resultado final indicó verificaciones fallidas.
+
+**Conclusión:**
+La versión incorrecta permitió condiciones de carrera porque verificaba la disponibilidad antes de ejecutar la actualización. La versión correcta evalúa la condición y realiza el descuento atómicamente en MongoDB.
+
+**Evidencias:**
+- `comprar.txt`
+- `comprar-incorrecto.txt`
+
+**Estado:** OK
 ---
