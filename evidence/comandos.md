@@ -448,4 +448,65 @@ docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-rep
 - `rpo-baseline.txt`
 
 **Estado:** OK
+
+## Paso 11 — Falla A: caída de un secundario
+
+**Fecha y hora:** 01/11/2026, 16:54.
+
+**Escenario:** Se detuvo temporalmente `mongo-2` (SECONDARY) mientras la sonda continuaba realizando escrituras con `w="majority"`.
+
+**Comando de la sonda:**
+```cmd
+docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-replicas/sonda_escrituras.py --duration 40 --label "Falla A" --signal-file evidence/falla-a-stop.epoch --csv evidence/falla-a.csv > evidence\falla-a.txt 2>&1
+```
+
+**Operaciones realizadas durante la falla:**
+- Se detuvo `ti4601-mongo-2` mediante `docker stop --timeout 0`.
+- Se registró el instante de la falla en `falla-a-stop.epoch` y `falla-a-stop.txt`.
+- Se verificó mediante Docker que el contenedor estaba detenido (`Running: false`).
+- Se consultó el estado del Replica Set durante la falla.
+- Se mantuvo el secundario detenido aproximadamente 15 segundos y posteriormente se restauró mediante `docker start ti4601-mongo-2`.
+
+**Comando de verificación del RPO:**
+```cmd
+docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-replicas/verificar_rpo.py --csv evidence/falla-a.csv > evidence\falla-a-rpo.txt 2>&1
+```
+
+**Resultados:**
+- Corrida: `r81fe877b`.
+- Durante la falla, `mongo-2` reportó `health: 0`.
+- `mongo-1` permaneció como PRIMARY y `mongo-3` como SECONDARY.
+- La mayoría de 2 de 3 miembros se mantuvo disponible.
+- Intentos realizados: 80.
+- Operaciones confirmadas: 80.
+- Operaciones con error: 0.
+- Documentos presentes después de la recuperación: 80.
+- Operaciones confirmadas perdidas: 0.
+- RPO observado: 0.
+- No se observó interrupción de las escrituras confirmadas.
+
+**Latencias registradas:**
+
+| Métrica | Antes de la falla | Después de la falla |
+|---|---:|---:|
+| Operaciones confirmadas | 19 | 61 |
+| p50 | 19.6 ms | 11.0 ms |
+| p99 | 49.6 ms | 57.7 ms |
+
+- Primera escritura confirmada después de la señal: secuencia 19, aproximadamente 470 ms después.
+- No se observó un período de indisponibilidad; por tanto, no hubo un RTO de recuperación medible en este escenario.
+- Después de restaurar el nodo se verificó nuevamente un PRIMARY y dos SECONDARY, todos con `health: 1`.
+
+**Evidencias:**
+- `falla-a-before.txt`
+- `falla-a.txt`
+- `falla-a.csv`
+- `falla-a-stop.epoch`
+- `falla-a-stop.txt`
+- `falla-a-docker-status.txt`
+- `falla-a-status.txt`
+- `falla-a-recovered.txt`
+- `falla-a-rpo.txt`
+
+**Estado:** OK
 ---
