@@ -353,4 +353,53 @@ La versión incorrecta permitió condiciones de carrera porque verificaba la dis
 - `comprar-incorrecto.txt`
 
 **Estado:** OK
+
+## Paso 9 — Medición del costo de las garantías de escritura
+
+**Fecha y hora:** 01/11/2026 00:33.
+
+**Archivo modificado:** `bench_write_concern.py`
+
+**Implementación realizada:**
+- TODO 4: implementación de `medir_escrituras()` para medir la latencia de `insert_one()`.
+- Configuración de las garantías mediante `WriteConcern` y `with_options()`.
+- Medición del tiempo de cada inserción utilizando `time.perf_counter()`.
+- Comparación de las modalidades `w1`, `w1_journal`, `majority` y `w3`.
+- Se realizaron 30 inserciones de calentamiento y 300 mediciones por modalidad.
+
+**Comando de prueba inicial:**
+```bash
+docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-replicas/bench_write_concern.py --n 10 --warmup 3 --csv evidence/write-concern-prueba.csv
+```
+
+**Resultado:** las cuatro modalidades completaron correctamente las 10 mediciones de prueba.
+
+**Comando de medición definitiva:**
+```bash
+docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-replicas/bench_write_concern.py --n 300 --warmup 30 --csv evidence/write-concern.csv > evidence/write-concern.txt 2>&1
+```
+
+**Resultados:**
+
+| Modalidad | n | p50 (ms) | p95 (ms) | p99 (ms) | Operaciones/s |
+|---|---:|---:|---:|---:|---:|
+| `w1` | 300 | 0.57 | 1.32 | 2.59 | 1404 |
+| `w1_journal` | 300 | 6.35 | 12.80 | 20.49 | 137 |
+| `majority` | 300 | 6.71 | 11.50 | 30.84 | 127 |
+| `w3` | 300 | 1.36 | 1.90 | 3.59 | 680 |
+
+**Verificaciones:**
+- Las cuatro modalidades devolvieron la cantidad esperada de muestras.
+- Se generaron 1200 mediciones individuales.
+- El archivo CSV contiene 1201 líneas, incluyendo el encabezado.
+- `w1` presentó la menor latencia mediana.
+- `majority` presentó una latencia mediana aproximadamente 11.8 veces mayor que `w1`.
+- `w3` presentó menor latencia que `majority` en esta ejecución, aunque esto no implica que sea una garantía generalmente más rápida.
+- Los tres miembros del Replica Set comparten una misma computadora, sin latencia de red entre máquinas diferentes.
+
+**Evidencias:**
+- `write-concern.txt`
+- `write-concern.csv`
+
+**Estado:** OK
 ---

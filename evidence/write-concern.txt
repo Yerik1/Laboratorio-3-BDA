@@ -1,0 +1,12 @@
+ Container ti4601-app-run-55607f41cfcc Creating 
+ Container ti4601-app-run-55607f41cfcc Created 
+OK: las cuatro variantes devolvieron la cantidad esperada de muestras
+
+variante         n   p50_ms   p95_ms   p99_ms    ops/s
+w1             300     0.57     1.32     2.59     1404
+w1_journal     300     6.35    12.80    20.49      137
+majority       300     6.71    11.50    30.84      127
+w3             300     1.36     1.90     3.59      680
+
+Muestras crudas: evidence/write-concern.csv
+Declare en el informe: máquina, RAM, SO, n, calentamiento y que los tres miembros comparten una sola computadora (sin latencia de red real).
