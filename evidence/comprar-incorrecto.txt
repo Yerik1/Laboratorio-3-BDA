@@ -1,0 +1,12 @@
+ Container ti4601-app-run-56cfa51ffd7d Creating 
+ Container ti4601-app-run-56cfa51ffd7d Created 
+200 compradores en 0.92 s (217 compras/s)
+VERIFICACIÓN FALLÓ: confirmadas=188, agotadas=12; esperado 120/80
+VERIFICACIÓN FALLÓ: quedan -68; esperado 0
+OK: 188 órdenes confirmadas en pruebas_ordenes
+VERIFICACIÓN FALLÓ: VIP: resultados=['confirmada', 'confirmada', 'confirmada'], quedan -2; esperado 2 confirmadas, 1 agotada, quedan 2
+OK: la misma orden repetida 5 veces descontó una sola entrada (quedan 4)
+OK: una zona inexistente se resuelve como agotada
+
+Resultado: hay verificaciones fallidas (2026-11-01T06:12:07+00:00)
+

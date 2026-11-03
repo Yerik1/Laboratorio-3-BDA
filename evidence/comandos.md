@@ -221,4 +221,185 @@ docker exec ti4601-mongo-1 mongosh --quiet --eval "const d=db.getSiblingDB('bole
 
 **Estado:** OK
 
+## Paso 6 — Observación del oplog y retraso de replicación
+
+**Fecha y hora:** 31/10/2026, aproximadamente 23:50
+
+**Comandos ejecutados:**
+
+Inserción de una orden en el primario:
+```bash
+docker exec ti4601-mongo-1 mongosh --quiet --eval "printjson(db.getSiblingDB('boleteria').ordenes.insertOne({_id:'ORD-MANUAL-1',evento_id:'EV-0001',zona:'General',cantidad:2,estado:'confirmada'}))"
+```
+
+Consulta de la operación en el oplog:
+```bash
+docker exec ti4601-mongo-1 mongosh --quiet --eval "db.getSiblingDB('local').oplog.rs.find({ns:'boleteria.ordenes'}).sort({$natural:-1}).limit(3).forEach(printjson)"
+```
+
+Verificación de la orden desde un secundario:
+```bash
+docker exec ti4601-mongo-2 mongosh --quiet --eval "printjson(db.getSiblingDB('boleteria').ordenes.findOne({_id:'ORD-MANUAL-1'}))"
+```
+
+Prueba de escritura en un secundario:
+```bash
+docker exec ti4601-mongo-2 mongosh --quiet --eval "printjson(db.getSiblingDB('boleteria').ordenes.insertOne({_id:'ORD-NO',estado:'x'}))"
+```
+
+Generación de evidencia del oplog y retraso:
+```bash
+docker exec ti4601-mongo-1 mongosh --quiet --eval "db.getSiblingDB('local').oplog.rs.find({ns:'boleteria.ordenes'}).sort({$natural:-1}).limit(3).forEach(printjson); rs.printReplicationInfo(); rs.printSecondaryReplicationInfo()" > evidence/oplog.txt 2>&1
+```
+
+Consulta complementaria de tamaño y ventana del oplog:
+```bash
+docker exec ti4601-mongo-1 mongosh --quiet --eval "const o=db.getSiblingDB('local').oplog.rs; const primero=o.find().sort({$natural:1}).limit(1).next(); const ultimo=o.find().sort({$natural:-1}).limit(1).next(); printjson({tamanoMaximoBytes:o.stats().maxSize,primeraOperacion:primero.wall,ultimaOperacion:ultimo.wall,ventanaSegundos:ultimo.ts.getHighBits()-primero.ts.getHighBits()})" >> evidence/oplog.txt
+```
+
+**Resultados:**
+- La orden `ORD-MANUAL-1` se insertó correctamente (`acknowledged: true`).
+- Se encontró la operación en el oplog con `op: 'i'` y `ns: 'boleteria.ordenes'`.
+- La operación se registró en el término de elección `t: 1`.
+- Se verificó que `mongo-2` contenía el mismo documento insertado en el primario.
+- Los secundarios `mongo-2` y `mongo-3` reportaron un retraso de replicación de 0 segundos.
+- Tamaño máximo configurado del oplog: 50062255616 bytes.
+- Primera operación registrada: `2026-11-01T02:21:47.094Z`.
+- Última operación registrada: `2026-11-01T05:49:47.464Z`.
+- Ventana temporal observada del oplog: 12480 segundos (3 horas y 28 minutos).
+- Se confirmó que mongo-2, al actuar como SECONDARY, rechazó la escritura directa con el error MongoServerError: not primary.
+
+**Evidencia:** `oplog.txt`
+
+**Estado:** OK
+
+## Paso 7 — Lecturas obsoletas en secundarios
+
+**Fecha y hora:** 01/11/2026, 00:01.
+
+**Comando ejecutado:**
+```bash
+docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-replicas/lectura_secundario.py --n 500 --csv evidence/lectura-secundario.csv > evidence/lectura-secundario.txt 2>&1
+```
+
+**Resultados:**
+- Se ejecutaron 500 intentos por modalidad, para un total de 1500 intentos.
+- `w1_secundario`: 493 lecturas obsoletas (98.6 %).
+- `majority_secundario`: 0 lecturas obsoletas (0.0 %).
+- `causal_majority`: 0 lecturas obsoletas (0.0 %).
+- La escritura con `w:1` presentó la mayor cantidad de lecturas obsoletas.
+- En esta ejecución, las modalidades con `w="majority"` no presentaron lecturas obsoletas.
+- El modo causal obtuvo el resultado esperado de 0 %.
+- Se considera que los tres nodos comparten una misma computadora, por lo que las condiciones de replicación difieren de un entorno distribuido real.
+
+**Evidencias:**
+- `lectura-secundario.txt`
+- `lectura-secundario.csv`
+
+**Estado:** OK
+
+## Paso 8 — Compra atómica e idempotente
+
+**Fecha y hora:** 01/11/2026, 00:15.
+
+**Archivo modificado:** `comprar.py`
+
+**Implementación realizada:**
+- TODO 3: registro de órdenes con identificador único e implementación del descuento atómico mediante `update_one()`.
+- Uso de `$elemMatch` para comprobar disponibilidad en la zona correspondiente.
+- Uso de `$inc` y del operador posicional `$` para descontar las entradas.
+- Manejo de `DuplicateKeyError` para evitar descuentos repetidos por el mismo identificador de orden.
+- Prueba adicional con una implementación incorrecta que separa la lectura y la actualización.
+
+**Comando de prueba correcta:**
+```bash
+docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-replicas/comprar.py > evidence/comprar.txt 2>&1
+```
+
+**Resultados de la implementación correcta:**
+- 200 compradores simultáneos.
+- 120 compras confirmadas y 80 agotadas.
+- Cero entradas restantes, sin disponibilidad negativa.
+- 120 órdenes confirmadas registradas.
+- Compras VIP: dos confirmadas, una agotada y dos entradas restantes.
+- Cinco ejecuciones de la misma orden descontaron una sola entrada.
+- Una zona inexistente devolvió `agotada`.
+- Tiempo de ejecución: 0.66 segundos.
+- Rendimiento: 301 compras por segundo.
+- Las seis verificaciones terminaron correctamente.
+
+**Prueba con implementación incorrecta:**
+
+Se reemplazó temporalmente el descuento condicional por una lectura de disponibilidad seguida de una escritura independiente.
+
+**Comando ejecutado:**
+```bash
+docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-replicas/comprar.py > evidence/comprar-incorrecto.txt 2>&1
+```
+
+**Resultados:**
+- 188 compras confirmadas y 12 agotadas.
+- Se produjeron 68 ventas por encima de la capacidad disponible.
+- La disponibilidad de la zona General terminó en −68.
+- En VIP se confirmaron tres compras de cuatro entradas, dejando −2 disponibles.
+- Las pruebas de idempotencia y zona inexistente continuaron pasando.
+- El resultado final indicó verificaciones fallidas.
+
+**Conclusión:**
+La versión incorrecta permitió condiciones de carrera porque verificaba la disponibilidad antes de ejecutar la actualización. La versión correcta evalúa la condición y realiza el descuento atómicamente en MongoDB.
+
+**Evidencias:**
+- `comprar.txt`
+- `comprar-incorrecto.txt`
+
+**Estado:** OK
+
+## Paso 9 — Medición del costo de las garantías de escritura
+
+**Fecha y hora:** 01/11/2026 00:33.
+
+**Archivo modificado:** `bench_write_concern.py`
+
+**Implementación realizada:**
+- TODO 4: implementación de `medir_escrituras()` para medir la latencia de `insert_one()`.
+- Configuración de las garantías mediante `WriteConcern` y `with_options()`.
+- Medición del tiempo de cada inserción utilizando `time.perf_counter()`.
+- Comparación de las modalidades `w1`, `w1_journal`, `majority` y `w3`.
+- Se realizaron 30 inserciones de calentamiento y 300 mediciones por modalidad.
+
+**Comando de prueba inicial:**
+```bash
+docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-replicas/bench_write_concern.py --n 10 --warmup 3 --csv evidence/write-concern-prueba.csv
+```
+
+**Resultado:** las cuatro modalidades completaron correctamente las 10 mediciones de prueba.
+
+**Comando de medición definitiva:**
+```bash
+docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-replicas/bench_write_concern.py --n 300 --warmup 30 --csv evidence/write-concern.csv > evidence/write-concern.txt 2>&1
+```
+
+**Resultados:**
+
+| Modalidad | n | p50 (ms) | p95 (ms) | p99 (ms) | Operaciones/s |
+|---|---:|---:|---:|---:|---:|
+| `w1` | 300 | 0.57 | 1.32 | 2.59 | 1404 |
+| `w1_journal` | 300 | 6.35 | 12.80 | 20.49 | 137 |
+| `majority` | 300 | 6.71 | 11.50 | 30.84 | 127 |
+| `w3` | 300 | 1.36 | 1.90 | 3.59 | 680 |
+
+**Verificaciones:**
+- Las cuatro modalidades devolvieron la cantidad esperada de muestras.
+- Se generaron 1200 mediciones individuales.
+- El archivo CSV contiene 1201 líneas, incluyendo el encabezado.
+- `w1` presentó la menor latencia mediana.
+- `majority` presentó una latencia mediana aproximadamente 11.8 veces mayor que `w1`.
+- `w3` presentó menor latencia que `majority` en esta ejecución, aunque esto no implica que sea una garantía generalmente más rápida.
+- Los tres miembros del Replica Set comparten una misma computadora, sin latencia de red entre máquinas diferentes.
+
+**Evidencias:**
+- `write-concern.txt`
+- `write-concern.csv`
+
+**Estado:** OK
 ---

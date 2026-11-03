@@ -1,0 +1,46 @@
+{
+  lsid: {
+    id: UUID('4467d00e-e7b8-4c0e-bddd-33e11f25cb86'),
+    uid: Binary.createFromBase64('47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=', 0)
+  },
+  txnNumber: Long('1'),
+  op: 'i',
+  ns: 'boleteria.ordenes',
+  ui: UUID('732296aa-c09c-470e-96eb-a970c0f2b77c'),
+  o: {
+    _id: 'ORD-MANUAL-1',
+    evento_id: 'EV-0001',
+    zona: 'General',
+    cantidad: 2,
+    estado: 'confirmada'
+  },
+  o2: {
+    _id: 'ORD-MANUAL-1'
+  },
+  stmtId: 0,
+  ts: Timestamp({ t: 1793511995, i: 1 }),
+  t: Long('1'),
+  v: Long('2'),
+  wall: ISODate('2026-11-01T05:46:35.667Z'),
+  prevOpTime: {
+    ts: Timestamp({ t: 0, i: 0 }),
+    t: Long('-1')
+  }
+}
+source: mongo-2:27017
+{
+  syncedTo: 'Sun Nov 01 2026 05:47:37 GMT+0000 (Coordinated Universal Time)',
+  replLag: '0 secs (0 hrs) behind the primary '
+}
+---
+source: mongo-3:27017
+{
+  syncedTo: 'Sun Nov 01 2026 05:47:37 GMT+0000 (Coordinated Universal Time)',
+  replLag: '0 secs (0 hrs) behind the primary '
+}
+{
+  tamanoMaximoBytes: 50062255616,
+  primeraOperacion: ISODate('2026-11-01T02:21:47.094Z'),
+  ultimaOperacion: ISODate('2026-11-01T05:49:47.464Z'),
+  ventanaSegundos: 12480
+}
