@@ -575,4 +575,79 @@ docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-rep
 - `falla-b-rpo.txt`
 
 **Estado:** OK
+
+## Paso 13 — Falla C: pérdida de mayoría
+
+**Fecha y hora:** 01/11/2026, 17:14 .
+
+**Escenario:** Se detuvieron simultáneamente `mongo-1` y `mongo-2`, ambos SECONDARY, dejando solamente `mongo-3` disponible. Se ejecutaron escrituras con `w="majority"` y `wtimeout=2000 ms` para observar el comportamiento del conjunto al perder la mayoría.
+
+**Comando de la sonda:**
+
+```cmd
+docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-replicas/sonda_escrituras.py --duration 90 --label "Falla C" --signal-file evidence/falla-c-stop.epoch --csv evidence/falla-c.csv > evidence\falla-c.txt 2>&1
+```
+
+**Operaciones realizadas durante la falla:**
+- Se detuvieron los contenedores `ti4601-mongo-1` y `ti4601-mongo-2`.
+- Se registró el instante de falla en `falla-c-stop.epoch` y `falla-c-stop.txt`.
+- Docker confirmó que ambos contenedores estaban detenidos (`Running: false`).
+- MongoDB reportó `health: 0` para ambos nodos.
+- `mongo-3`, inicialmente PRIMARY, pasó a SECONDARY al perder la mayoría.
+- Se restauraron los dos secundarios y se verificó la recuperación del Replica Set.
+
+**Comando de verificación del RPO:**
+
+```cmd
+docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-replicas/verificar_rpo.py --csv evidence/falla-c.csv > evidence\falla-c-rpo.txt 2>&1
+```
+
+**Resultados:**
+- Corrida: `rd1cf5314`.
+- Intentos realizados: 108.
+- Operaciones confirmadas: 94.
+- Operaciones con error: 14.
+- `WTimeoutError`: 4.
+- `WriteConcernError`: 1.
+- `ServerSelectionTimeoutError`: 9.
+- Documentos presentes después de la recuperación: 99.
+- Operaciones confirmadas perdidas: 0.
+- Operaciones con error que sí quedaron almacenadas: 5 (secuencias 12, 13, 14, 15 y 16).
+- Operaciones con error ausentes: 9.
+- RPO observado de operaciones confirmadas: 0.
+
+**Cálculo del tiempo de recuperación:**
+- Marca de falla: `1793574621.517`.
+- Primera escritura confirmada después de la falla: secuencia 26, aproximadamente `1793574664.277`.
+- Tiempo desde la falla hasta la primera confirmación posterior: **42.760 segundos**.
+- Ventana entre la última confirmación anterior y la primera posterior: **43.233 segundos**.
+
+**Latencias de las escrituras confirmadas:**
+
+| Métrica | Antes de la falla | Después de la falla |
+|---|---:|---:|
+| Operaciones | 12 | 82 |
+| p50 | 10.7 ms | 14.3 ms |
+| p99 | 42.7 ms | 296.9 ms |
+
+**Estado del Replica Set:**
+- Antes de la falla: `mongo-3` PRIMARY, término 2.
+- Durante la falla: `mongo-3` SECONDARY, sin mayoría.
+- Después de restaurar los nodos: `mongo-3` PRIMARY, término 3.
+- Los tres nodos finalizaron saludables.
+
+**Conclusión:** La pérdida de mayoría impidió confirmar nuevas escrituras con `w="majority"` hasta la recuperación del conjunto. Se observaron cinco operaciones con error que sí habían quedado almacenadas, lo cual demuestra que un error de confirmación no equivale necesariamente a una escritura descartada. No se perdió ninguna operación previamente confirmada.
+
+**Evidencias:**
+- `falla-c-before.txt`
+- `falla-c.txt`
+- `falla-c.csv`
+- `falla-c-stop.epoch`
+- `falla-c-stop.txt`
+- `falla-c-docker-status.txt`
+- `falla-c-status.txt`
+- `falla-c-recovered.txt`
+- `falla-c-rpo.txt`
+
+**Estado:** OK
 ---

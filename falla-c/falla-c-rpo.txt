@@ -1,0 +1,13 @@
+ Container ti4601-app-run-07811f5de8dc Creating 
+ Container ti4601-app-run-07811f5de8dc Created 
+Corrida rd1cf5314
+  intentos .............. 108
+  confirmados (ok) ...... 94
+  con error ............. 14
+  presentes en la base .. 99  (readConcern majority)
+  PERDIDOS (confirmados ausentes) ......... 0  []
+  errores que SÍ se escribieron ........... 5  [12, 13, 14, 15, 16]
+  errores que NO se escribieron ........... 9
+  inesperados (presentes, nunca intentados) 0
+
+RPO observado sobre operaciones confirmadas: 0 (ninguna se perdió)
