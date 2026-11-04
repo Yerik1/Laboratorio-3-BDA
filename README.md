@@ -1,4 +1,4 @@
-# Laboratorio 3 — Conjuntos de réplicas en MongoDB
+# Laboratorio 3 — Conjuntos de réplicas en MongoDB.
 
 **Curso:** TI4601 — Bases de Datos Avanzadas  
 **Motor:** MongoDB 8.0  
