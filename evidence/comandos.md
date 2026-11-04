@@ -402,4 +402,252 @@ docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-rep
 - `write-concern.csv`
 
 **Estado:** OK
+
+## Paso 10 — Verificación del RPO y línea base
+
+**Fecha y hora:** 01/11/2026, 16:28.
+
+**Archivo modificado:** `verificar_rpo.py`
+
+**Implementación realizada:**
+- TODO 5: implementación de `calcular_rpo()` mediante operaciones entre conjuntos.
+- Clasificación de operaciones confirmadas perdidas, errores presentes, errores ausentes y documentos inesperados.
+- Verificación del resultado utilizando lecturas con `readConcern: majority`.
+
+**Comando de pruebas sintéticas:**
+```bash
+docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-replicas/verificar_rpo.py --autotest
+```
+
+**Resultado:** los tres casos sintéticos finalizaron correctamente.
+
+**Comando de línea base:**
+```bash
+docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-replicas/sonda_escrituras.py --duration 10 --label Base --csv evidence/rpo-baseline.csv
+```
+
+**Comando de verificación del RPO:**
+```bash
+docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-replicas/verificar_rpo.py --csv evidence/rpo-baseline.csv > evidence/rpo-baseline.txt 2>&1
+```
+
+**Resultados:**
+- Corrida: `r45dc2f28`.
+- Intentos realizados: 20.
+- Operaciones confirmadas: 20.
+- Operaciones con error: 0.
+- Documentos presentes en MongoDB: 20.
+- Operaciones confirmadas perdidas: 0.
+- Errores que sí quedaron escritos: 0.
+- Errores que no quedaron escritos: 0.
+- Documentos inesperados: 0.
+- RPO observado sobre operaciones confirmadas: 0.
+
+**Evidencias:**
+- `rpo-baseline.csv`
+- `rpo-baseline.txt`
+
+**Estado:** OK
+
+## Paso 11 — Falla A: caída de un secundario
+
+**Fecha y hora:** 01/11/2026, 16:54.
+
+**Escenario:** Se detuvo temporalmente `mongo-2` (SECONDARY) mientras la sonda continuaba realizando escrituras con `w="majority"`.
+
+**Comando de la sonda:**
+```cmd
+docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-replicas/sonda_escrituras.py --duration 40 --label "Falla A" --signal-file evidence/falla-a-stop.epoch --csv evidence/falla-a.csv > evidence\falla-a.txt 2>&1
+```
+
+**Operaciones realizadas durante la falla:**
+- Se detuvo `ti4601-mongo-2` mediante `docker stop --timeout 0`.
+- Se registró el instante de la falla en `falla-a-stop.epoch` y `falla-a-stop.txt`.
+- Se verificó mediante Docker que el contenedor estaba detenido (`Running: false`).
+- Se consultó el estado del Replica Set durante la falla.
+- Se mantuvo el secundario detenido aproximadamente 15 segundos y posteriormente se restauró mediante `docker start ti4601-mongo-2`.
+
+**Comando de verificación del RPO:**
+```cmd
+docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-replicas/verificar_rpo.py --csv evidence/falla-a.csv > evidence\falla-a-rpo.txt 2>&1
+```
+
+**Resultados:**
+- Corrida: `r81fe877b`.
+- Durante la falla, `mongo-2` reportó `health: 0`.
+- `mongo-1` permaneció como PRIMARY y `mongo-3` como SECONDARY.
+- La mayoría de 2 de 3 miembros se mantuvo disponible.
+- Intentos realizados: 80.
+- Operaciones confirmadas: 80.
+- Operaciones con error: 0.
+- Documentos presentes después de la recuperación: 80.
+- Operaciones confirmadas perdidas: 0.
+- RPO observado: 0.
+- No se observó interrupción de las escrituras confirmadas.
+
+**Latencias registradas:**
+
+| Métrica | Antes de la falla | Después de la falla |
+|---|---:|---:|
+| Operaciones confirmadas | 19 | 61 |
+| p50 | 19.6 ms | 11.0 ms |
+| p99 | 49.6 ms | 57.7 ms |
+
+- Primera escritura confirmada después de la señal: secuencia 19, aproximadamente 470 ms después.
+- No se observó un período de indisponibilidad; por tanto, no hubo un RTO de recuperación medible en este escenario.
+- Después de restaurar el nodo se verificó nuevamente un PRIMARY y dos SECONDARY, todos con `health: 1`.
+
+**Evidencias:**
+- `falla-a-before.txt`
+- `falla-a.txt`
+- `falla-a.csv`
+- `falla-a-stop.epoch`
+- `falla-a-stop.txt`
+- `falla-a-docker-status.txt`
+- `falla-a-status.txt`
+- `falla-a-recovered.txt`
+- `falla-a-rpo.txt`
+
+**Estado:** OK
+
+## Paso 12 — Falla B: caída del primario
+
+**Fecha y hora:** 01/11/2026, 17:04.
+
+**Escenario:** Se detuvo `mongo-1` (PRIMARY) mientras la sonda realizaba escrituras con `w="majority"`. Los dos secundarios permanecieron disponibles para elegir un nuevo primario.
+
+**Comando de la sonda:**
+```cmd
+docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-replicas/sonda_escrituras.py --duration 60 --label "Falla B" --signal-file evidence/falla-b-stop.epoch --csv evidence/falla-b.csv > evidence\falla-b.txt 2>&1
+```
+
+**Operaciones durante la falla:**
+- Se detuvo `ti4601-mongo-1` mediante `docker kill`.
+- Se registró el instante de caída en `falla-b-stop.epoch` y `falla-b-stop.txt`.
+- Se comprobó que el contenedor estaba detenido (`Running: false`).
+- Se esperaron 15 segundos para permitir una nueva elección.
+- Se consultó el estado del Replica Set desde `mongo-2`.
+- Se restauró `mongo-1` mediante `docker start`.
+
+**Comando de verificación del RPO:**
+```cmd
+docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-replicas/verificar_rpo.py --csv evidence/falla-b.csv > evidence\falla-b-rpo.txt 2>&1
+```
+
+**Resultados:**
+- Corrida: `r4115e834`.
+- Antes de la falla, `mongo-1` era PRIMARY y el término de elección era 1.
+- Durante la falla, `mongo-3` fue elegido PRIMARY y el término aumentó a 2.
+- `mongo-1` regresó como SECONDARY después de la recuperación.
+- Intentos: 101.
+- Escrituras confirmadas: 98.
+- Operaciones con error: 3.
+- Tipo de error: `ServerSelectionTimeoutError`.
+- Documentos presentes: 98.
+- Operaciones confirmadas perdidas: 0.
+- Los tres intentos con error resultaron ausentes en la base.
+- RPO observado: 0 operaciones.
+
+**Cálculo del RTO:**
+- Marca de falla: `1793574106.109`.
+- Primera confirmación posterior: `seq=14`, `1793574116.435820`.
+- RTO = `1793574116.435820 - 1793574106.109`.
+- **RTO observado: 10.327 segundos.**
+- Ventana entre la última confirmación anterior y la primera posterior: 10.967 segundos.
+
+**Latencias registradas:**
+
+| Métrica | Antes de la falla | Después de la falla |
+|---|---:|---:|
+| Operaciones confirmadas | 11 | 87 |
+| p50 | 9.7 ms | 26.5 ms |
+| p99 | 48.7 ms | 170.0 ms |
+
+**Evidencias:**
+- `falla-b-before.txt`
+- `falla-b.txt`
+- `falla-b.csv`
+- `falla-b-stop.epoch`
+- `falla-b-stop.txt`
+- `falla-b-docker-status.txt`
+- `falla-b-status.txt`
+- `falla-b-recovered.txt`
+- `falla-b-rpo.txt`
+
+**Estado:** OK
+
+## Paso 13 — Falla C: pérdida de mayoría
+
+**Fecha y hora:** 01/11/2026, 17:14 .
+
+**Escenario:** Se detuvieron simultáneamente `mongo-1` y `mongo-2`, ambos SECONDARY, dejando solamente `mongo-3` disponible. Se ejecutaron escrituras con `w="majority"` y `wtimeout=2000 ms` para observar el comportamiento del conjunto al perder la mayoría.
+
+**Comando de la sonda:**
+
+```cmd
+docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-replicas/sonda_escrituras.py --duration 90 --label "Falla C" --signal-file evidence/falla-c-stop.epoch --csv evidence/falla-c.csv > evidence\falla-c.txt 2>&1
+```
+
+**Operaciones realizadas durante la falla:**
+- Se detuvieron los contenedores `ti4601-mongo-1` y `ti4601-mongo-2`.
+- Se registró el instante de falla en `falla-c-stop.epoch` y `falla-c-stop.txt`.
+- Docker confirmó que ambos contenedores estaban detenidos (`Running: false`).
+- MongoDB reportó `health: 0` para ambos nodos.
+- `mongo-3`, inicialmente PRIMARY, pasó a SECONDARY al perder la mayoría.
+- Se restauraron los dos secundarios y se verificó la recuperación del Replica Set.
+
+**Comando de verificación del RPO:**
+
+```cmd
+docker compose --profile lab3 run --rm --no-deps app python3 labs/lab3-mongo-replicas/verificar_rpo.py --csv evidence/falla-c.csv > evidence\falla-c-rpo.txt 2>&1
+```
+
+**Resultados:**
+- Corrida: `rd1cf5314`.
+- Intentos realizados: 108.
+- Operaciones confirmadas: 94.
+- Operaciones con error: 14.
+- `WTimeoutError`: 4.
+- `WriteConcernError`: 1.
+- `ServerSelectionTimeoutError`: 9.
+- Documentos presentes después de la recuperación: 99.
+- Operaciones confirmadas perdidas: 0.
+- Operaciones con error que sí quedaron almacenadas: 5 (secuencias 12, 13, 14, 15 y 16).
+- Operaciones con error ausentes: 9.
+- RPO observado de operaciones confirmadas: 0.
+
+**Cálculo del tiempo de recuperación:**
+- Marca de falla: `1793574621.517`.
+- Primera escritura confirmada después de la falla: secuencia 26, aproximadamente `1793574664.277`.
+- Tiempo desde la falla hasta la primera confirmación posterior: **42.760 segundos**.
+- Ventana entre la última confirmación anterior y la primera posterior: **43.233 segundos**.
+
+**Latencias de las escrituras confirmadas:**
+
+| Métrica | Antes de la falla | Después de la falla |
+|---|---:|---:|
+| Operaciones | 12 | 82 |
+| p50 | 10.7 ms | 14.3 ms |
+| p99 | 42.7 ms | 296.9 ms |
+
+**Estado del Replica Set:**
+- Antes de la falla: `mongo-3` PRIMARY, término 2.
+- Durante la falla: `mongo-3` SECONDARY, sin mayoría.
+- Después de restaurar los nodos: `mongo-3` PRIMARY, término 3.
+- Los tres nodos finalizaron saludables.
+
+**Conclusión:** La pérdida de mayoría impidió confirmar nuevas escrituras con `w="majority"` hasta la recuperación del conjunto. Se observaron cinco operaciones con error que sí habían quedado almacenadas, lo cual demuestra que un error de confirmación no equivale necesariamente a una escritura descartada. No se perdió ninguna operación previamente confirmada.
+
+**Evidencias:**
+- `falla-c-before.txt`
+- `falla-c.txt`
+- `falla-c.csv`
+- `falla-c-stop.epoch`
+- `falla-c-stop.txt`
+- `falla-c-docker-status.txt`
+- `falla-c-status.txt`
+- `falla-c-recovered.txt`
+- `falla-c-rpo.txt`
+
+**Estado:** OK
 ---

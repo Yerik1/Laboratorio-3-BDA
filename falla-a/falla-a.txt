@@ -1,0 +1,91 @@
+ Container ti4601-app-run-0caa903c0800 Creating 
+ Container ti4601-app-run-0caa903c0800 Created 
+[Falla A] run=r81fe877b w=majority wtimeout=2000 ms retryWrites=True
+antes-falla   ok    seq=0         19.6 ms 
+antes-falla   ok    seq=1          6.9 ms 
+antes-falla   ok    seq=2         29.4 ms 
+antes-falla   ok    seq=3         10.5 ms 
+antes-falla   ok    seq=4          7.7 ms 
+antes-falla   ok    seq=5         40.0 ms 
+antes-falla   ok    seq=6         37.2 ms 
+antes-falla   ok    seq=7         36.5 ms 
+antes-falla   ok    seq=8         49.6 ms 
+antes-falla   ok    seq=9          6.2 ms 
+antes-falla   ok    seq=10         9.5 ms 
+antes-falla   ok    seq=11         7.7 ms 
+antes-falla   ok    seq=12        31.2 ms 
+antes-falla   ok    seq=13        13.1 ms 
+antes-falla   ok    seq=14        30.2 ms 
+antes-falla   ok    seq=15        32.9 ms 
+antes-falla   ok    seq=16        26.7 ms 
+antes-falla   ok    seq=17         6.9 ms 
+antes-falla   ok    seq=18        10.7 ms 
+despues-falla ok    seq=19         4.6 ms 
+despues-falla ok    seq=20         7.3 ms 
+despues-falla ok    seq=21         6.7 ms 
+despues-falla ok    seq=22        11.5 ms 
+despues-falla ok    seq=23         6.8 ms 
+despues-falla ok    seq=24        10.1 ms 
+despues-falla ok    seq=25        22.9 ms 
+despues-falla ok    seq=26        31.6 ms 
+despues-falla ok    seq=27        30.6 ms 
+despues-falla ok    seq=28         7.0 ms 
+despues-falla ok    seq=29        21.5 ms 
+despues-falla ok    seq=30         4.7 ms 
+despues-falla ok    seq=31        11.0 ms 
+despues-falla ok    seq=32         7.1 ms 
+despues-falla ok    seq=33         7.4 ms 
+despues-falla ok    seq=34         7.5 ms 
+despues-falla ok    seq=35         7.3 ms 
+despues-falla ok    seq=36         7.2 ms 
+despues-falla ok    seq=37         9.8 ms 
+despues-falla ok    seq=38        32.9 ms 
+despues-falla ok    seq=39        30.1 ms 
+despues-falla ok    seq=40        34.7 ms 
+despues-falla ok    seq=41         9.7 ms 
+despues-falla ok    seq=42         9.8 ms 
+despues-falla ok    seq=43        12.6 ms 
+despues-falla ok    seq=44         7.6 ms 
+despues-falla ok    seq=45        12.8 ms 
+despues-falla ok    seq=46        55.2 ms 
+despues-falla ok    seq=47         8.0 ms 
+despues-falla ok    seq=48        11.3 ms 
+despues-falla ok    seq=49        37.0 ms 
+despues-falla ok    seq=50         6.7 ms 
+despues-falla ok    seq=51        32.9 ms 
+despues-falla ok    seq=52         7.3 ms 
+despues-falla ok    seq=53        34.3 ms 
+despues-falla ok    seq=54         7.7 ms 
+despues-falla ok    seq=55         7.4 ms 
+despues-falla ok    seq=56         7.7 ms 
+despues-falla ok    seq=57         5.3 ms 
+despues-falla ok    seq=58         8.1 ms 
+despues-falla ok    seq=59        27.4 ms 
+despues-falla ok    seq=60         9.4 ms 
+despues-falla ok    seq=61         8.4 ms 
+despues-falla ok    seq=62        33.3 ms 
+despues-falla ok    seq=63        10.4 ms 
+despues-falla ok    seq=64        29.5 ms 
+despues-falla ok    seq=65         9.0 ms 
+despues-falla ok    seq=66        30.2 ms 
+despues-falla ok    seq=67        57.0 ms 
+despues-falla ok    seq=68        13.4 ms 
+despues-falla ok    seq=69        39.3 ms 
+despues-falla ok    seq=70        57.7 ms 
+despues-falla ok    seq=71         8.9 ms 
+despues-falla ok    seq=72        33.2 ms 
+despues-falla ok    seq=73        27.2 ms 
+despues-falla ok    seq=74        25.5 ms 
+despues-falla ok    seq=75        27.0 ms 
+despues-falla ok    seq=76        27.6 ms 
+despues-falla ok    seq=77        34.2 ms 
+despues-falla ok    seq=78        33.4 ms 
+despues-falla ok    seq=79        10.0 ms 
+
+Intentos: 80 · confirmados: 80 · errores: 0
+Latencia de escrituras confirmadas antes-falla  : n=19   p50=19.6 ms  p99=49.6 ms  máx=49.6 ms
+Latencia de escrituras confirmadas despues-falla: n=61   p50=11.0 ms  p99=57.7 ms  máx=57.7 ms
+Primera escritura confirmada tras la señal: seq=19 a 470 ms de la falla (compruébelo en el CSV).
+No hubo errores tras la señal: la falla no interrumpió las escrituras.
+
+Evidencia: evidence/falla-a.csv  (run=r81fe877b)

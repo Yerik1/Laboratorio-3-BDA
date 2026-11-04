@@ -1,0 +1,13 @@
+ Container ti4601-app-run-2a045e60ef76 Creating 
+ Container ti4601-app-run-2a045e60ef76 Created 
+Corrida r4115e834
+  intentos .............. 101
+  confirmados (ok) ...... 98
+  con error ............. 3
+  presentes en la base .. 98  (readConcern majority)
+  PERDIDOS (confirmados ausentes) ......... 0  []
+  errores que SÍ se escribieron ........... 0  []
+  errores que NO se escribieron ........... 3
+  inesperados (presentes, nunca intentados) 0
+
+RPO observado sobre operaciones confirmadas: 0 (ninguna se perdió)
