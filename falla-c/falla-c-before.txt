@@ -1,0 +1,20 @@
+[
+  {
+    name: 'mongo-1:27017',
+    state: 'SECONDARY',
+    health: 1
+  },
+  {
+    name: 'mongo-2:27017',
+    state: 'SECONDARY',
+    health: 1
+  },
+  {
+    name: 'mongo-3:27017',
+    state: 'PRIMARY',
+    health: 1
+  }
+]
+{
+  term: Long('2')
+}

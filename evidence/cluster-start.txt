@@ -1,0 +1,5 @@
+CONTAINER ID   IMAGE       COMMAND                  CREATED              STATUS                        PORTS       NAMES
+7b6d89d55054   mongo:8.0   "docker-entrypoint.s…"   About a minute ago   Up About a minute (healthy)   27017/tcp   ti4601-mongo-2
+4268039c917f   mongo:8.0   "docker-entrypoint.s…"   About a minute ago   Up About a minute (healthy)   27017/tcp   ti4601-mongo-3
+d03e64c04c8a   mongo:8.0   "docker-entrypoint.s…"   About a minute ago   Up About a minute (healthy)   27017/tcp   ti4601-mongo-1
+MongoServerError: no replset config has been received

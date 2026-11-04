@@ -1,0 +1,13 @@
+ Container ti4601-app-run-04988fa245f9 Creating 
+ Container ti4601-app-run-04988fa245f9 Created 
+Corrida r81fe877b
+  intentos .............. 80
+  confirmados (ok) ...... 80
+  con error ............. 0
+  presentes en la base .. 80  (readConcern majority)
+  PERDIDOS (confirmados ausentes) ......... 0  []
+  errores que SÍ se escribieron ........... 0  []
+  errores que NO se escribieron ........... 0
+  inesperados (presentes, nunca intentados) 0
+
+RPO observado sobre operaciones confirmadas: 0 (ninguna se perdió)
